@@ -13,6 +13,7 @@ const inputElevation = document.querySelector('.form__input--elevation');
 class Workout {
 date = new Date();
 id = (Date.now()+ "").slice(-10);
+clicks = 0;
 
 
     constructor(coords, distance, duration) {
@@ -30,6 +31,9 @@ this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} on ${
   } ${this.date.getDate()}`;
 
     }
+    click(){
+        this.clicks++;
+    }
 }
 
 class Running extends Workout{
@@ -38,6 +42,7 @@ class Running extends Workout{
         super(coords, distance, duration);
         this.cadence = cadence;
         this.calcPace();
+        this._setDescription();
     }
     calcPace(){
         this.pace = this.duration / this.distance;
@@ -67,6 +72,7 @@ console.log(run1,cyc1);
 //APPLICATION ARCHITECTURE
 class App{
     #map;
+    #mapZoomLevel = 13;
     #mapEvent;
     #workouts =[];
 
@@ -76,7 +82,10 @@ class App{
 
         form.addEventListener("submit", this._newWorkout.bind(this));
 
-        inputType.addEventListener("change", this._toggleElevationField)}
+        inputType.addEventListener("change", this._toggleElevationField)
+
+        containerWorkouts.addEventListener("click", this._movetoPopup.bind(this));
+    };
 
     _getPosition(){
         if(navigator.geolocation)
@@ -94,7 +103,7 @@ navigator.geolocation.getCurrentPosition(this._loadMap.bind(this),function(){
         
             const coords = [latitude, longitude]
         
-         this.#map = L.map('map').setView(coords, 13);
+         this.#map = L.map('map').setView(coords, this.#mapZoomLevel);
         
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -182,6 +191,8 @@ this._renderWorkoutMarker(workout)
         ///Hide form clear input field
         this._hideForm()
         
+        //Set local storage to all workouts
+        this._setLocalStorage();
         
         }
         _renderWorkoutMarker(workout){
@@ -236,6 +247,30 @@ this._renderWorkoutMarker(workout)
 
         form.insertAdjacentHTML("afterend", html);
 
+        }
+
+        _movetoPopup(e){
+const workoutEl = e.target.closest(".workout");
+console.log(workoutEl);
+
+if(!workoutEl) return;
+
+const workout = this.#workouts.find(work => work.id === workoutEl.dataset.id);
+console.log(workout);
+
+this.#map.setView(workout.coords, this.#mapZoomLevel, {
+    animate: true,
+    pan: {
+        duration: 1,
+    }
+});
+
+//using the public interface
+workout.click();
+
+        }
+        _setLocalStorage(){
+            localStorage.setItem("workouts",JSON.stringify(this.#workouts));
         }
         
     }
